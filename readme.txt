@@ -1,13 +1,15 @@
-����lex��yacc�����Լ��Ľű����ԣ�ʹ�����������װ�
+利用lex和yacc创建自己的脚本语言，使得轻量级，易绑定
 
-�ű����ԣ�
-@.����������lua
-@.ȫ��Ϊ����
-@.��֧�ָ��ӽṹ��vector��map��
-@.���ڼ������Ա���ຯ�����﷨
+脚本特性：
+@.代码风格类似lua
+@.全部为函数
+@.不支持复杂结构如vector，map等
+@.支持routine，可设置多个processor实现多核利用
+@.后期加入fuck testfunc(param1)的用法，类似于goroutine
+@.后期加入类成员和类函数的语法
 @.todo
 
-ʾ����
+示例：
 -- func1 comment
 func myfunc1(arg1, arg2)
 	
@@ -36,5 +38,3 @@ func myfunc2(arg1, arg2)
 	return arg3
 	
 end
-
-
