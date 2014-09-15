@@ -11,54 +11,25 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\fuckscript.h" />
-    <ClInclude Include="src\binary.h" />
-    <ClInclude Include="src\bison.h" />
-    <ClInclude Include="src\codegen.h" />
-    <ClInclude Include="src\compiler.h" />
-    <ClInclude Include="src\FlexLexer.h" />
-    <ClInclude Include="src\fuck.h" />
-    <ClInclude Include="src\interpreter.h" />
-    <ClInclude Include="src\myflexer.h" />
-    <ClInclude Include="src\paramstack.h" />
-    <ClInclude Include="src\processor.h" />
-    <ClInclude Include="src\routine.h" />
-    <ClInclude Include="src\semantic.h" />
-    <ClInclude Include="src\syntree.h" />
-    <ClInclude Include="src\types.h" />
-    <ClInclude Include="src\variant.h" />
+    <Text Include="CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\binary.cpp" />
-    <ClCompile Include="src\bison.cpp" />
-    <ClCompile Include="src\codegen.cpp" />
-    <ClCompile Include="src\compiler.cpp" />
-    <ClCompile Include="src\flex.cpp" />
-    <ClCompile Include="src\fuck.cpp" />
-    <ClCompile Include="src\fuckscript.cpp" />
-    <ClCompile Include="src\interpreter.cpp" />
-    <ClCompile Include="src\myflexer.cpp" />
-    <ClCompile Include="src\paramstack.cpp" />
-    <ClCompile Include="src\processor.cpp" />
-    <ClCompile Include="src\routine.cpp" />
-    <ClCompile Include="src\syntree.cpp" />
-    <ClCompile Include="src\types.cpp" />
-    <ClCompile Include="src\variant.cpp" />
+    <ClCompile Include="test.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{577D7563-0013-47F8-A6AF-2A025CE98E9A}</ProjectGuid>
+    <ProjectGuid>{BED6654C-1638-49E1-ABA6-49DD89188598}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>testasdf</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
     <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
@@ -76,14 +47,14 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>./include;./src;./src/win32;$(IncludePath)</IncludePath>
-    <OutDir>./bin</OutDir>
+    <IncludePath>../include;$(IncludePath)</IncludePath>
+    <OutDir>../bin</OutDir>
     <TargetName>$(ProjectName)_d</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>./include;./src;./src/win32;$(IncludePath)</IncludePath>
-    <OutDir>./bin</OutDir>
+    <IncludePath>../include;$(IncludePath)</IncludePath>
+    <OutDir>../bin</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -96,7 +67,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>../bin/fuckscript_d.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>LIBCMTD.lib</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
@@ -115,7 +86,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>../bin/fuckscript.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>LIBCMT.lib</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
