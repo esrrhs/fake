@@ -27,11 +27,11 @@ int main(int argc, const char *argv[])
 
 	unsigned int begin,end;
 
-    // inter
+    // jit
 	begin = time(0);
 
 #ifndef WIN32
-	ProfilerStart("testinter.prof");
+	ProfilerStart("testjit.prof");
 #endif
 		
 #ifndef _DEBUG
@@ -40,10 +40,10 @@ int main(int argc, const char *argv[])
 	for (int i = 0; i < 1; i++)
 #endif
 	{
-		ret = fkrun<int>(fk, "myfunc1", 1, 2);
+		ret = fkrunjit<int>(fk, "myfunc1", 1, 2);
 		if (fkerror(fk))
 		{
-			printf("call fail errorno %d, %s\n", fkerror(fk), fkerrorstr(fk));
+			printf("jit fail errorno %d, %s\n", fkerror(fk), fkerrorstr(fk));
 			return 0;
 		}
 	}
@@ -54,7 +54,7 @@ int main(int argc, const char *argv[])
 	
 	end = time(0);
 
-	printf("call ret %d %d\n", ret, end - begin);
+	printf("jit ret %d %d\n", ret, end - begin);
 
 	char c;
 	std::cin >> c;
