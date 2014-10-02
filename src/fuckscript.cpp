@@ -193,14 +193,14 @@ FUCK_API void fkpspushcharptr(fuck * fk, char * ret)
 {
     variant * v = 0;
     PS_PUSH_AND_GET(fk->ps, v);
-    V_SET_STRING(v, ret);
+    V_SET_STRING(v, fk->sh.allocstring(ret));
 }
 
 FUCK_API void fkpspushccharptr(fuck * fk, const char * ret)
 {
     variant * v = 0;
     PS_PUSH_AND_GET(fk->ps, v);
-    V_SET_STRING(v, ret);
+    V_SET_STRING(v, fk->sh.allocstring(ret));
 }
 
 FUCK_API void fkpspushbool(fuck * fk, bool ret)
@@ -305,11 +305,11 @@ FUCK_API double fkpspopdouble(fuck * fk)
 
 FUCK_API const char * fkpspopcstrptr(fuck * fk)
 {
-    const char * ret;
+    stringele * ret;
     variant * v = 0;
     PS_POP_AND_GET(fk->ps, v);
     V_GET_STRING(v, ret);
-    return ret;
+    return ret->str.c_str();
 }
 
 FUCK_API bool fkpspopbool(fuck * fk)

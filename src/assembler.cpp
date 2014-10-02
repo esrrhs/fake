@@ -48,6 +48,7 @@ bool assembler::compile_func(const func_binary & fb)
 
     asg.copy_const(fb.m_const_list, fb.m_const_list_num, fb.m_maxstack);
 
+    // loop
     m_pos = 0;
     while (m_pos < (int)fb.m_size)
     {
@@ -59,7 +60,10 @@ bool assembler::compile_func(const func_binary & fb)
             return false;
         }
     }
+    // end
+	m_posmap[m_pos] = asg.size();
 
+    // link jmp pos
     for (caremap::iterator it = m_caremap.begin(); it != m_caremap.end(); it++)
     {
         int jumpposoff = it->first;
@@ -211,7 +215,7 @@ bool assembler::compile_return(asmgen & asg, const func_binary & fb, command cmd
 	if (GET_CMD(fb, m_pos) == EMPTY_CMD)
 	{
 		FKLOG("return empty");
-		m_pos = fb.m_size;
+        m_pos++;
 		return true;
 	}
 	

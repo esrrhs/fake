@@ -2,7 +2,7 @@
 
 #include "types.h"
 
-struct stringbuf;
+struct stringele;
 struct variant 
 {
 	enum Type 
@@ -16,7 +16,7 @@ struct variant
 	union MemData
 	{
 		double real;
-		stringbuf * str;
+		stringele * str;
 		void * ptr;
 		int64_t buf;	// 只是用作64位传递 
 	};
@@ -37,9 +37,9 @@ struct variant
     v->type = variant::REAL;\
     v->data.real = r;
 
-#define V_SET_STRING(v, s) \
+#define V_SET_STRING(v, se) \
     v->type = variant::STRING;\
-    v->data.str = 0;    // TODO
+    v->data.str = se;
 
 #define V_GET_POINTER(v, p) \
     p = v->data.ptr;
@@ -47,8 +47,8 @@ struct variant
 #define V_GET_REAL(v, r) \
     r = v->data.real;
     
-#define V_GET_STRING(v, s) \
-    s = 0;    // TODO
+#define V_GET_STRING(v, se) \
+    se = v->data.str;
 
 #define V_PLUS(d, l, r) d->data.real = l->data.real + r->data.real
 #define V_MINUS(d, l, r) d->data.real = l->data.real - r->data.real
