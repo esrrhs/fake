@@ -45,8 +45,6 @@ int main(int argc, const char *argv[])
 		return false;
 	}
 
-	luaL_openlibs(L);
-
     lua_tinker::def(L, "cfunc1", cfunc1); 
 
 	lua_tinker::dofile(L, argv[1]);
