@@ -12,31 +12,30 @@ stringheap::~stringheap()
 
 void stringheap::clear()
 {
-    for (int i = 0; i < (int)m_stringelelist.size(); i++)
+    for (const stringhashmap<stringele*>::ele * p = m_shh.first(); p != 0; p = m_shh.next())
     {
-        safe_fkfree(m_fk, m_stringelelist[i].s);
+        stringele * e = p->t;
+        safe_fkfree(m_fk, e->s);
     }
-    m_stringelelist.clear();
 	m_shh.clear();
 }
 
 stringele * stringheap::allocstring(const char * str)
 {
-    int * p = m_shh.get(str);
+    stringele ** p = m_shh.get(str);
     if (p)
     {
-		return &m_stringelelist[*p];
+		return *p;
 	}
-	int pos = m_stringelelist.size();
-	stringele e;
+	stringele * pe = (stringele*)safe_fkmalloc(m_fk, sizeof(stringele));
+	stringele & e = *pe;
 	e.update = 0;
 	e.sz = strlen(str);
 	e.s = (char*)safe_fkmalloc(m_fk, e.sz + 1);
 	memcpy(e.s, str, e.sz);
 	e.s[e.sz] = 0;
-	m_stringelelist.push_back(e);
-	m_shh.add(str, pos);
-	return &m_stringelelist[pos];
+	m_shh.add(str, pe);
+	return pe;
 }
 
 void stringheap::gc()

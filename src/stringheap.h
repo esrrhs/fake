@@ -14,8 +14,6 @@ struct stringele
     size_t sz;
 };
 
-typedef std::vector<stringele> stringelelist;
-
 class stringheap
 {
 public:
@@ -31,7 +29,6 @@ private:
 
 private:
     fake * m_fk;    
-    stringelelist m_stringelelist;
-    stringhashmap<int> m_shh;
+    stringhashmap<stringele*> m_shh;
 };
 
