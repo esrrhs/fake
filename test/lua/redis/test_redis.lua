@@ -81,7 +81,7 @@ function test_subscribe_rejected()
     config["port"] = 1
     config["timeout_ms"] = 500
     local conn = redis.connect(config, "RedisTest.on_connect")
-    local cmds = { "SUBSCRIBE", "PSUBSCRIBE", "UNSUBSCRIBE", "PUNSUBSCRIBE", "subscribe" }
+    local cmds = { "SUBSCRIBE", "PSUBSCRIBE", "UNSUBSCRIBE", "PUNSUBSCRIBE", "subscribe", "SSUBSCRIBE", "SUNSUBSCRIBE", "ssubscribe" }
     for i = 1, #cmds do
         local cmd = cmds[i]
         local ok, err = pcall(function()

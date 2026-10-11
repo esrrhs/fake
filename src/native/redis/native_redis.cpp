@@ -185,7 +185,8 @@ public:
         std::transform(verb.begin(), verb.end(), verb.begin(), [](unsigned char ch) {
             return static_cast<char>(std::tolower(ch));
         });
-        if (verb == "subscribe" || verb == "psubscribe" || verb == "unsubscribe" || verb == "punsubscribe") {
+        if (verb == "subscribe" || verb == "psubscribe" || verb == "unsubscribe" || verb == "punsubscribe" ||
+            verb == "ssubscribe" || verb == "sunsubscribe") {
             ThrowFakeluaException("redis: '" + verb + "' is not supported, command() is one-shot RPC and cannot deliver pub/sub pushes");
         }
         if (closed_ || close_pending_ || !ac_ || !ready_) {
