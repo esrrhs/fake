@@ -1053,11 +1053,27 @@ __attribute__((noinline)) static bool FlArrTryResize(VarTable *tbl, int64_t nk) 
     return true;
 }
 
-/* 整数键 k 要插入已写满的哈希部分前调用；返回 true 表示 k 已写入数组，调用方直接返回。*/
+/* 整数键 k 要插入已写满的哈希部分前调用；返回 true 表示 k 已写入数组或哈希空位，调用方直接返回。*/
 static inline bool FlArrResizeInsert(VarTable *tbl, CVar k, CVar v) {
     if (k.type_ != VAR_INT || tbl->spec_set) { return false; }
     if (!FlArrTryResize(tbl, k.data_.i)) { return false; }
-    return FlArrSetInt(tbl, k.data_.i, v);
+    if (FlArrSetInt(tbl, k.data_.i, v)) { return true; }
+    uint32_t h = (uint32_t)(k.data_.i ^ (k.data_.i >> 32));
+    if (tbl->bucket_count_ == 0) {
+        if (tbl->count_ < 8) {
+            tbl->quick_data_[tbl->count_].key = k;
+            tbl->quick_data_[tbl->count_].val = v;
+            tbl->quick_data_[tbl->count_].hash = h;
+            tbl->count_++;
+            return true;
+        }
+    } else {
+        if (tbl->count_ < tbl->bucket_count_ && tbl->free_list_idx_ != 0xFFFFFFFF) {
+            FlTableInsertRaw(tbl, k, v, h);
+            return true;
+        }
+    }
+    return false;
 }
 
 static inline void FlSetTableImpl(CVar t, CVar k, CVar v) {
@@ -1076,10 +1092,10 @@ static inline void FlSetTableImpl(CVar t, CVar k, CVar v) {
 }
 
 static inline void FlSetTable(CVar t, CVar k, CVar v) {
+    k = NORMALIZE_TABLE_KEY(k);
     FlSetTableImpl(t, k, v);
     if (LIKELY(t.type_ == VAR_TABLE)) {
-        CVar __nk = NORMALIZE_TABLE_KEY(k);
-        if (__nk.type_ == VAR_INT) { FlSeqNoteIntSet(t.data_.t, __nk.data_.i, v.type_ == VAR_NIL); }
+        if (k.type_ == VAR_INT) { FlSeqNoteIntSet(t.data_.t, k.data_.i, v.type_ == VAR_NIL); }
     }
 }
 

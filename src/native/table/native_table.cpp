@@ -507,13 +507,32 @@ bool TableArrTryResize(State *s, VarTable *tbl, int64_t nk) {
     return true;
 }
 
-// 整数键 k 要插入已写满的哈希部分前调用；返回 true 表示 k 已写入数组。
+// 整数键 k 要插入已写满的哈希部分前调用；返回 true 表示 k 已写入数组或哈希空位。
 bool TableArrResizeInsert(State *s, VarTable *tbl, int64_t k, CVar v) {
     if (tbl->spec_set) return false;
     const bool full = tbl->bucket_count_ == 0 ? tbl->count_ >= VarTable::QUICK_DATA_SIZE : (tbl->count_ >= tbl->bucket_count_ || tbl->free_list_idx_ == VarTable::INVALID_INDEX);
     if (!full) return false;
     if (!TableArrTryResize(s, tbl, k)) return false;
-    return TableArrSetInt(s, tbl, k, v);
+    if (TableArrSetInt(s, tbl, k, v)) return true;
+    CVar key{kIntType};
+    key.data_.i = k;
+    const uint32_t hash = IntKeyHash(k);
+    if (tbl->bucket_count_ == 0) {
+        if (tbl->count_ < VarTable::QUICK_DATA_SIZE) {
+            auto &qd = tbl->quick_data_[tbl->count_];
+            static_cast<CVar &>(qd.key) = key;
+            static_cast<CVar &>(qd.val) = v;
+            qd.hash = hash;
+            tbl->count_++;
+            return true;
+        }
+    } else {
+        if (tbl->count_ < tbl->bucket_count_ && tbl->free_list_idx_ != VarTable::INVALID_INDEX) {
+            TableInsertRaw(tbl, key, v, hash);
+            return true;
+        }
+    }
+    return false;
 }
 
 }// namespace

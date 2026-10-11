@@ -3,13 +3,13 @@ local function checksum(t)
     local n = 0
     for k, v in pairs(t) do
         if type(k) == "number" then
-            s = s + k * 31 + v
+            s = s + math.floor(k) * 31 + math.floor(v)
         else
             s = s + 7
         end
         n = n + 1
     end
-    return s * 1000 + n
+    return math.floor(s * 1000 + n)
 end
 
 function test_table_array_part()
@@ -83,5 +83,78 @@ function test_table_array_part()
     m[4] = 4
     total = total + checksum(m) + #m
 
-    return total
+    -- table.move 数组段自移动与跨表移动
+    local mv_src = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }
+    table.move(mv_src, 1, 5, 6, mv_src)
+    total = total + checksum(mv_src) + #mv_src
+    local mv_dst = {}
+    table.move(mv_src, 1, 10, 1, mv_dst)
+    total = total + checksum(mv_dst) + #mv_dst
+    table.move(mv_src, 3, 7, 1, mv_src)
+    total = total + checksum(mv_src) + #mv_src
+
+    -- 浮点等价键与非整数浮点键
+    local flt = {}
+    flt[1.0] = 100
+    flt[2.0] = 200
+    flt[1.5] = 150
+    flt[2.5] = 250
+    total = total + math.floor(flt[1]) + math.floor(flt[2]) + math.floor(flt[1.5]) + math.floor(flt[2.5]) + #flt
+    total = total + checksum(flt) + #flt
+    flt[1] = 111
+    total = total + math.floor(flt[1.0])
+
+    -- 大规模连续扩容与截断收缩
+    local big = {}
+    for i = 1, 512 do big[i] = i end
+    total = total + #big + big[1] + big[512]
+    for i = 512, 257, -1 do big[i] = nil end
+    total = total + #big
+    for i = 257, 512 do big[i] = i * 2 end
+    total = total + #big + checksum(big)
+
+    -- 阶梯跳跃打洞再逆向补齐
+    local sk = {}
+    sk[1] = 10
+    sk[4] = 40
+    sk[8] = 80
+    sk[16] = 160
+    total = total + #sk
+    sk[2] = 20
+    sk[3] = 30
+    total = total + #sk
+    for i = 5, 7 do sk[i] = i * 10 end
+    total = total + #sk
+    for i = 9, 15 do sk[i] = i * 10 end
+    total = total + #sk + checksum(sk)
+
+    -- table.create 预分配数组配合数组操作
+    local tc = table.create(30, 7)
+    total = total + #tc + tc[1] + tc[30]
+    tc[15] = 99
+    table.insert(tc, 100)
+    total = total + #tc + tc[31] + checksum(tc)
+
+    -- table.pack / table.unpack
+    local pk = table.pack(11, 22, 33, 44, 55)
+    local u1, u2, u3, u4, u5 = table.unpack(pk, 1, 5)
+    total = total + u1 + u2 + u3 + u4 + u5 + pk.n + checksum(pk)
+
+    -- ipairs 遍历数组段与遇到空洞截断
+    local ip_tbl = { 10, 20, 30, 40, 50 }
+    ip_tbl[3] = nil
+    local ip_sum = 0
+    for idx, val in ipairs(ip_tbl) do
+        ip_sum = ip_sum + idx * 100 + val
+    end
+    total = total + ip_sum
+
+    -- 边界极值键与负数键
+    local ext = { 1, 2, 3 }
+    ext[0] = 99
+    ext[-10] = 88
+    ext[2147483647] = 77
+    total = total + #ext + ext[1] + ext[2] + ext[3] + ext[0] + ext[-10] + ext[2147483647]
+
+    return math.tointeger(total) or math.floor(total)
 end
