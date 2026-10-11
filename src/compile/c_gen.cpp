@@ -970,7 +970,7 @@ bool CGen::TryInferMathCallBitmask(const std::string &callee_name, const std::ve
         for (int i = 0; i < static_cast<int>(math_params.size()); ++i) {
             const int param_pos = math_params[i];
             if (param_pos >= static_cast<int>(raw_args.size())) {
-                return false;// fewer args than math params: let slow-path ThrowError handle it
+                return false;// fewer args than math params: let slow-path deopt handle it
             }
             const auto &arg = raw_args[static_cast<size_t>(param_pos)];
             DEBUG_ASSERT(arg && arg->Type() == SyntaxTreeType::Exp);

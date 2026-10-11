@@ -47,6 +47,36 @@ function deopt_fact(n)
     return n * deopt_fact(n - 1)
 end
 
+-- Specialized function without explicit return at block end:
+-- exercise !BlockEndsWithReturn(func_block) in __dyn emitting "return kNil;"
+function deopt_noreturn(x)
+    if type(x) ~= "number" then
+        -- no return
+    else
+        x = x + 1
+    end
+end
+
+local function dyn_callee()
+    return "dyn_str"
+end
+
+-- Expressions with unsupported operators or dynamic calls trigger
+-- ThrowSpecMiss during tentative numeric compilation and fall back cleanly.
+function deopt_unsupported_ops(x)
+    if type(x) ~= "number" then
+        return -1
+    end
+    if x < 0 then
+        local a = x + (~"abc")
+        local b = x + (#"abc")
+        local c = x + ("a" .. "b")
+        local d = x + dyn_callee()
+        return a + b + c + d
+    end
+    return x * 2
+end
+
 -- In-Lua verification entry: returns 0 only when every expectation holds.
 function test_deopt()
     if deopt_guard(10) ~= 11 then
@@ -58,35 +88,55 @@ function test_deopt()
     if deopt_guard(true) ~= -1 then
         return 3
     end
-    if deopt_multi(1, 2) ~= 4 then
+    local ok4, res4 = pcall(deopt_guard)
+    if not ok4 or res4 ~= -1 then
         return 4
     end
-    if deopt_multi("x", 2) ~= 0 then
+    if deopt_multi(1, 2) ~= 4 then
         return 5
     end
-    if deopt_multi(2, "y") ~= 0 then
+    if deopt_multi("x", 2) ~= 0 then
         return 6
     end
-    if deopt_kind(5) ~= 105 then
+    if deopt_multi(2, "y") ~= 0 then
         return 7
     end
-    if deopt_kind("z") ~= "kind" then
+    local ok8, res8 = pcall(deopt_multi, 1)
+    if not ok8 or res8 ~= 0 then
         return 8
     end
-    if deopt_fact(5) ~= 120 then
+    if deopt_kind(5) ~= 105 then
         return 9
     end
-    if deopt_fact("z") ~= -1 then
+    if deopt_kind("z") ~= "kind" then
         return 10
     end
-    if pcall(deopt_arith, "abc") then
+    if deopt_fact(5) ~= 120 then
         return 11
     end
-    if pcall(deopt_arith, {}) then
+    if deopt_fact("z") ~= -1 then
         return 12
     end
-    if deopt_arith(41) ~= 42 then
+    if pcall(deopt_arith, "abc") then
         return 13
+    end
+    if pcall(deopt_arith, {}) then
+        return 14
+    end
+    if deopt_arith(41) ~= 42 then
+        return 15
+    end
+    if deopt_noreturn(10) ~= nil then
+        return 16
+    end
+    if deopt_noreturn("abc") ~= nil then
+        return 17
+    end
+    if deopt_unsupported_ops(5) ~= 10 then
+        return 18
+    end
+    if deopt_unsupported_ops("z") ~= -1 then
+        return 19
     end
     return 0
 end

@@ -4661,5 +4661,26 @@ TEST(infer, test_spec_deopt) {
         }
         Call(s, type, "deopt_arith", ret, 41);
         ASSERT_EQ(ret, 42);
+
+        // Fallback for unsupported operations inside trial numeric expressions
+        Call(s, type, "deopt_unsupported_ops", ret, 5);
+        ASSERT_EQ(ret, 10);
+        Call(s, type, "deopt_unsupported_ops", ret, "z");
+        ASSERT_EQ(ret, -1);
+
+        // Specialized function with no explicit return at block end
+        CVar nil_ret;
+        Call(s, type, "deopt_noreturn", nil_ret, 10);
+        ASSERT_EQ(nil_ret.type_, static_cast<int>(VarType::Nil));
+        Call(s, type, "deopt_noreturn", nil_ret, "abc");
+        ASSERT_EQ(nil_ret.type_, static_cast<int>(VarType::Nil));
     });
+}
+
+TEST(infer, test_spec_miss_exception) {
+    try {
+        throw FakeluaSpecMissException("test spec miss signal");
+    } catch (const FakeluaSpecMissException &e) {
+        ASSERT_TRUE(std::string(e.what()).find("test spec miss signal") != std::string::npos);
+    }
 }
