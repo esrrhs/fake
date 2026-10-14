@@ -165,9 +165,8 @@ static CVar CallByNameImpl(State *state, int jit_type, const char *name, int arg
             vararg_cvar.data_.m = m;
             temp_arg_arr[fixed_arg_count] = vararg_cvar;
         } else {
-            if (UNLIKELY(!last_is_multi && flat_count != expected_arg_count)) {
-                ThrowFakeluaException(std::format("FakeluaCallByName: function '{}' expects {} argument(s), got {}", name, expected_arg_count, flat_count));
-            }
+            // Lua 语义：实参个数与形参无须一致——少传的形参补 nil，多传的实参
+            // 丢弃（下方循环只取前 expected_arg_count 个）。与 FlCallClosure 一致。
             for (int i = 0; i < expected_arg_count; ++i) {
                 temp_arg_arr[i] = i < flat_count ? flat_args_buf[i] : (CVar){static_cast<int>(VarType::Nil)};
             }

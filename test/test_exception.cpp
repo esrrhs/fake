@@ -1343,18 +1343,25 @@ TEST(exception, for_loop_zero_step_float) {
     }
 }
 
-TEST(exception, spec_call_arg_count_error) {
+TEST(exception, spec_call_fewer_args_runtime_throw) {
     FakeluaStateGuard sg;
     auto s = sg.GetState();
     ASSERT_NE(s, nullptr);
     SetDebugLogLevel(s, 0);
 
-    try {
-        CompileFile(s, "./exception/test_spec_call_arg_count_error.lua", {});
-        ASSERT_TRUE(false);
-    } catch (const std::exception &e) {
-        std::cout << e.what() << std::endl;
-        ASSERT_TRUE(std::string(e.what()).find("wrong number of arguments") != std::string::npos);
+    // Lua 语义：实参少于形参合法（缺失形参为 nil），编译期不报错；
+    // 函数体内对 nil 形参做算术才在运行时报错。
+    CompileFile(s, "./exception/test_spec_call_arg_count_error.lua", {});
+
+    for (auto jit_type: AllJitTypes()) {
+        try {
+            int ret = 0;
+            Call(s, jit_type, "test_fewer_args", ret, 1);
+            ASSERT_TRUE(false);
+        } catch (const std::exception &e) {
+            std::cout << e.what() << std::endl;
+            ASSERT_TRUE(std::string(e.what()).find("attempt to perform arithmetic on non-numeric value") != std::string::npos);
+        }
     }
 }
 
@@ -1480,12 +1487,19 @@ TEST(exception, math_spec_too_few_args) {
     ASSERT_NE(s, nullptr);
     SetDebugLogLevel(s, 0);
 
-    try {
-        CompileFile(s, "./exception/test_math_spec_too_few_args.lua", {});
-        ASSERT_TRUE(false);
-    } catch (const std::exception &e) {
-        std::cout << e.what() << std::endl;
-        ASSERT_TRUE(std::string(e.what()).find("wrong number of arguments") != std::string::npos);
+    // 同 spec_call_fewer_args_runtime_throw：少传参数编译通过，
+    // 数学特化函数回退到通用 CVar 入口后，对 nil 形参做算术才报错。
+    CompileFile(s, "./exception/test_math_spec_too_few_args.lua", {});
+
+    for (auto jit_type: AllJitTypes()) {
+        try {
+            int ret = 0;
+            Call(s, jit_type, "test_fewer_args", ret, 1);
+            ASSERT_TRUE(false);
+        } catch (const std::exception &e) {
+            std::cout << e.what() << std::endl;
+            ASSERT_TRUE(std::string(e.what()).find("attempt to perform arithmetic on non-numeric value") != std::string::npos);
+        }
     }
 }
 
@@ -1555,12 +1569,18 @@ TEST(exception, no_arg_call) {
     ASSERT_NE(s, nullptr);
     SetDebugLogLevel(s, 0);
 
-    try {
-        CompileFile(s, "./exception/test_no_arg_call.lua", {});
-        ASSERT_TRUE(false);
-    } catch (const std::exception &e) {
-        std::cout << e.what() << std::endl;
-        ASSERT_TRUE(std::string(e.what()).find("wrong number of arguments") != std::string::npos);
+    // compute() 不传实参：编译通过，compute 内 n 为 nil，n * 2 在运行时报错。
+    CompileFile(s, "./exception/test_no_arg_call.lua", {});
+
+    for (auto jit_type: AllJitTypes()) {
+        try {
+            int ret = 0;
+            Call(s, jit_type, "test", ret, 1);
+            ASSERT_TRUE(false);
+        } catch (const std::exception &e) {
+            std::cout << e.what() << std::endl;
+            ASSERT_TRUE(std::string(e.what()).find("attempt to perform arithmetic on non-numeric value") != std::string::npos);
+        }
     }
 }
 

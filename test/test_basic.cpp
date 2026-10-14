@@ -1347,3 +1347,20 @@ TEST(test_basic, xpcall_coverage) {
     EXPECT_EQ(ret, 1);
     FakeluaDeleteState(s);
 }
+
+// 函数调用实参个数语义：少传补 nil、多传丢弃。三条调用路径（直接调用 / 闭包变量 /
+// 按名分发）与三个后端（TCC/GCC/interp）都必须与 Lua 5.4 一致。
+TEST(test_basic, call_arity) {
+    State *s = FakeluaNewState();
+    ASSERT_NE(s, nullptr);
+    CompileConfig config;
+
+    for (auto jit_type: AllJitTypes()) {
+        CompileFile(s, "./basic/test_basic_call_arity.lua", config);
+        int64_t res = 0;
+        Call(s, jit_type, "test_basic_call_arity", res);
+        EXPECT_EQ(res, 92LL);
+    }
+
+    FakeluaDeleteState(s);
+}
