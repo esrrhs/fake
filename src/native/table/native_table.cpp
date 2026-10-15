@@ -946,10 +946,13 @@ void RegisterTableLibraryApi(State *s) {
         std::string sep = "";
         if (n >= 2) {
             CVar sep_var = inter::GetNativeArg(state, args, n, 1);
-            // 标准 Lua：table.concat 的 sep 必须是 string（数字会被转换为字符串，这是标准行为）
-            CheckStringArg(sep_var, 2, "table.concat");
-            std::string temp_sep;
-            sep = std::string(GetStringArgView(sep_var, temp_sep));
+            // Lua 5.4 tconcat：sep 是 luaL_optlstring，显式 nil 与省略等价，默认 ""
+            if (sep_var.type_ != static_cast<int>(VarType::Nil)) {
+                // 标准 Lua：table.concat 的 sep 必须是 string（数字会被转换为字符串，这是标准行为）
+                CheckStringArg(sep_var, 2, "table.concat");
+                std::string temp_sep;
+                sep = std::string(GetStringArgView(sep_var, temp_sep));
+            }
         }
         // Lua 5.4 tconcat 的 i/j 是 luaL_optinteger：显式 nil 与省略等价，取默认值
         // （i 默认 1，j 默认 #t）。包装函数转发（f(t, sep, i, j) 少传实参）会传入显式

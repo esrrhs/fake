@@ -49,7 +49,7 @@ TEST(test_table, test_table_optnil) {
         CompileFile(s, "./table/test_table_optnil.lua", config);
         int64_t res = 0;
         Call(s, jit_type, "test_table_optnil", res);
-        EXPECT_EQ(res, 75LL);
+        EXPECT_EQ(res, 83LL);
     }
 
     FakeluaDeleteState(s);
