@@ -3390,9 +3390,20 @@ std::string CGen::CompileFunctioncall(const SyntaxTreeInterfacePtr &functioncall
     std::string call_expr;
     bool is_local_callee = BindsLocalValue(var_ptr);
 
-    // Lua 语义：被调函数形参个数与实参个数无须一致——少传的形参在函数体内为 nil，
-    // 多传的实参求值后丢弃。直接调用路径统一在 BuildLocalFunctionCall 里做 nil 补齐/
-    // 截断（与 FlCallClosure 运行时分发路径的行为一致），此处不再做编译期精确个数检查。
+    if (!is_local_callee && local_func_names_.contains(func_name)) {
+        const auto &info = local_func_names_.at(func_name);
+        if (!info.is_vararg && !has_expansion) {
+            if (static_cast<int>(compiled_args.size()) != info.params_count) {
+                ThrowError(std::format("wrong number of arguments to '{}': expected {}, got {}", func_name, info.params_count, compiled_args.size()), functioncall);
+            }
+        }
+        if (!info.is_vararg && has_expansion) {
+            int expanded_count = static_cast<int>(compiled_args.size()) + (info.params_count - expansion_start_idx);
+            if (expanded_count != info.params_count) {
+                ThrowError(std::format("wrong number of arguments to '{}': expected {}, got {}", func_name, info.params_count, expanded_count), functioncall);
+            }
+        }
+    }
 
     if (local_func_names_.contains(func_name) && !is_local_callee) {
         call_expr = BuildLocalFunctionCall(func_name, compiled_args, has_expansion, expansion_tmp, expansion_start_idx);
@@ -4120,9 +4131,9 @@ std::string CGen::TryCompileSpecDirectCall(const std::shared_ptr<SyntaxTreeFunct
             if (BindsLocalValue(callee_var.get())) {
                 return "";
             }
-            // 特化直调按原函数的精确形参个数发射 C 调用。Lua 允许实参个数与形参
-            // 不一致（少传补 nil、多传丢弃），此时回退普通直接调用路径，由
-            // BuildLocalFunctionCall 统一补齐/截断，避免生成参数个数不符的 C。
+            // 特化直调按原函数的精确形参个数发射 C 调用。若实参个数与形参不一致，
+            // 回退普通直接调用路径，由 CompileFunctioncall 给出明确的编译期
+            // wrong number of arguments 报错，避免向底层 C 编译器发射参数不符的调用。
             const auto fn_it = local_func_names_.find(callee_name);
             if (fn_it == local_func_names_.end()) {
                 return "";
@@ -4763,24 +4774,9 @@ std::string CGen::BuildLocalFunctionCall(const std::string &func_name, const std
     } else {
         const int expected_params = info.params_count;
         if (has_expansion) {
-            if (expansion_start_idx < expected_params) {
-                for (int i = expansion_start_idx; i < expected_params; ++i) {
-                    args.push_back(std::format("FlUnboxMulti({}, {})", expansion_tmp, i - expansion_start_idx));
-                }
-            } else {
-                // 展开位置已超出形参个数：前面的实参已填满所有形参，
-                // 多出的实参与展开值按 Lua 语义求值后丢弃。
-                args.resize(expected_params);
+            for (int i = expansion_start_idx; i < expected_params; ++i) {
+                args.push_back(std::format("FlUnboxMulti({}, {})", expansion_tmp, i - expansion_start_idx));
             }
-        }
-        // Lua 语义：少传的实参以 nil 补齐（FlUnboxMulti 越界同样取 nil），
-        // 多传的实参截断丢弃；两侧均与 FlCallClosure 运行时路径保持一致。
-        if (static_cast<int>(args.size()) < expected_params) {
-            while (static_cast<int>(args.size()) < expected_params) {
-                args.push_back("kNil");
-            }
-        } else if (static_cast<int>(args.size()) > expected_params) {
-            args.resize(expected_params);
         }
     }
     std::string call_expr = (info.c_symbol_name.empty() ? func_name : info.c_symbol_name) + "(NULL";

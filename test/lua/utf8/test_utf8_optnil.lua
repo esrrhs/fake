@@ -34,7 +34,7 @@ function test_utf8_optnil()
 
     -- utf8.offset：n 必填；i 默认 1（n>=0）
     total = total + offset_wrap(s, 2, nil)  -- 第 2 字符起始字节 -> 2
-    total = total + offset_wrap(s, 1)       -- 1
+    total = total + offset_wrap(s, 1, nil)  -- 1
     total = total + offset_wrap(s, 0, nil)  -- 1
 
     -- n 传 nil 必须报错（checkinteger），不能静默取默认

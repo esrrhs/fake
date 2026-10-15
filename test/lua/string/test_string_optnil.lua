@@ -38,7 +38,7 @@ function test_string_optnil()
     if ok then total = total + 1000 end            -- 不应发生：i 为 nil 必须报错
 
     -- string.byte：i 默认 1，j 默认 i（j 给定时返回两个字节）
-    total = total + byte_wrap("hello", nil)       -- 104
+    total = total + byte_wrap("hello", nil, nil)   -- 104
     total = total + byte_wrap("hello", 2, nil)    -- 101
     total = total + byte_wrap("hello", nil, 2)    -- 104+101 = 205
 

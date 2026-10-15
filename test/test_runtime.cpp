@@ -195,22 +195,12 @@ TEST(runtime, vm_call_by_name_error_cases) {
     EXPECT_THROW((void) FakeluaCallByName(&s, TEST_JIT_TYPE, "nulladdr", 0), std::exception);
 
     s.GetVM().RegisterFunction(VmFunction("fnv", 8, TEST_JIT_TYPE, reinterpret_cast<void *>(&VmFnEcho8), {}));
+    EXPECT_THROW((void) FakeluaCallByName(&s, TEST_JIT_TYPE, "fnv", 9, a0, a1, a2, a3, a4, a5, a6, a7, a8), std::exception);
 
-    // 参数个数与形参不一致沿 Lua 语义处理：多传的丢弃、少传的补 nil，
-    // 不再抛异常。Bug M 关注的「读取未初始化栈内存」由补齐保证：
-    // CallByNameImpl 在派发前把 temp_arg_arr 的前 expected_arg_count 个槽全部写满
-    // （实参不足的部分写 kNil），因此下面两次调用返回的都是确定的值。
-    const CVar r9 = FakeluaCallByName(&s, TEST_JIT_TYPE, "fnv", 9, a0, a1, a2, a3, a4, a5, a6, a7, a8);
-    ASSERT_EQ(r9.type_, static_cast<int>(VarType::Int));
-    ASSERT_EQ(r9.data_.i, 0);// 多传的第 9 个实参被丢弃，返回第 1 个形参
-
-    const CVar r3 = FakeluaCallByName(&s, TEST_JIT_TYPE, "fnv", 3, a0, a1, a2);
-    ASSERT_EQ(r3.type_, static_cast<int>(VarType::Int));
-    ASSERT_EQ(r3.data_.i, 0);
-
-    // 0 个实参：8 个形参全部补 nil，返回第 1 个形参即 nil（不是未初始化内存）
-    const CVar r0_args = FakeluaCallByName(&s, TEST_JIT_TYPE, "fnv", 0);
-    ASSERT_EQ(r0_args.type_, static_cast<int>(VarType::Nil));
+    // Bug M: 参数个数与函数签名不匹配时必须抛异常（否则会读取未初始化栈内存）。
+    // 这里 fnv 要求 8 个参数，分别传 3 个 / 0 个都应抛异常。
+    EXPECT_THROW((void) FakeluaCallByName(&s, TEST_JIT_TYPE, "fnv", 3, a0, a1, a2), std::exception);
+    EXPECT_THROW((void) FakeluaCallByName(&s, TEST_JIT_TYPE, "fnv", 0), std::exception);
 }
 
 TEST(runtime, vm_helper_functions_throw_and_alloc) {
@@ -529,12 +519,8 @@ TEST(vm_cvar_call, multi_return_expansion) {
     multi_one.type_ = static_cast<int>(VarType::Multi);
     multi_one.data_.m = m_one;
 
-    // 1. 分支 A: 含 Multi 且末尾实参不是 Multi，实参个数(3) 多于形参(2) —— 按 Lua 语义
-    // 截断丢弃，不再抛异常。multi_two_a 非末尾只取 vars[0]=20，故实参为 (20, 1, 20)，
-    // 截断后 (20, 1)，echo2 返回第 2 个形参 = 1。
-    const CVar r0 = FakeluaCallByName(&s, TEST_JIT_TYPE, "echo2", 3, multi_two_a, int1, int20);
-    ASSERT_EQ(r0.type_, static_cast<int>(VarType::Int));
-    ASSERT_EQ(r0.data_.i, 1);
+    // 1. 分支 A: has_any_multi 为 true，但最后一个参数不是 Multi 并且 arg_num != expected_arg_count -> 抛出异常
+    EXPECT_THROW(FakeluaCallByName(&s, TEST_JIT_TYPE, "echo2", 3, multi_two_a, int1, int20), std::exception);
 
     // 2. 正常的多参数解包覆盖：
     // expected_arg_count = 4, 我们传 3 个参数：int1, multi_two_a (非末尾，只取 vars[0]), multi_two_b (末尾，全部展开)
