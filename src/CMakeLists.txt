@@ -300,13 +300,23 @@ endif()
 # and fails to load on any machine that does not have that exact Homebrew prefix; the
 # Windows DLL likewise dragged in libssl-3-x64.dll / libcrypto-3-x64.dll.
 option(FAKELUA_PREFER_STATIC_DEPS "Prefer static third-party libraries where possible" ON)
-if (FAKELUA_PREFER_STATIC_DEPS)
+if (FAKELUA_PREFER_STATIC_DEPS AND NOT MINGW)
     set(OPENSSL_USE_STATIC_LIBS TRUE)
     if (WIN32)
         # Match the static CRT choice when consuming MSVC-built OpenSSL.
         set(OPENSSL_MSVC_STATIC_RT ON)
     endif ()
 endif ()
+# MinGW keeps the *shared* OpenSSL on purpose (libcrypto-3-x64.dll / libssl-3-x64.dll).
+#
+# RC4 / Blowfish / DES live in OpenSSL 3's "legacy" provider, which is a loadable module
+# (ossl-modules/legacy.dll), not part of libcrypto itself. A static libcrypto can only find
+# that module through the MODULESDIR compiled into it, and MSYS2 builds OpenSSL with a MSYS
+# path there ("/mingw64/lib/ossl-modules") that Win32 LoadLibrary cannot resolve. Statically
+# linking OpenSSL on MinGW therefore makes OSSL_PROVIDER_load("legacy") fail silently and
+# breaks crypto.rc4 / blowfish / des (verified: BuildWithWindows, 8 test_crypto failures).
+# The shared libcrypto derives its module directory from the DLL location at runtime, so it
+# finds legacy.dll. Ship those two DLLs next to libfakelua.dll in the release archive.
 
 if (WIN32 AND NOT OPENSSL_ROOT_DIR)
     get_filename_component(_fakelua_mingw_bin "${CMAKE_CXX_COMPILER}" DIRECTORY)
@@ -320,13 +330,14 @@ endif()
 find_package(OpenSSL REQUIRED)
 find_package(Threads REQUIRED)
 
-if (FAKELUA_PREFER_STATIC_DEPS)
+if (OPENSSL_USE_STATIC_LIBS)
     # Guard against silently resolving to the shared libs (e.g. a Homebrew keg installed
     # without the .a files), which would reintroduce the hardcoded runtime path.
+    # ".dll.a" covers the MinGW/MSVC import libraries of the OpenSSL DLLs.
     set(_fl_openssl_shared "")
     foreach (_fl_ssl_lib OpenSSL::SSL OpenSSL::Crypto)
         get_target_property(_fl_lib_loc ${_fl_ssl_lib} IMPORTED_LOCATION)
-        if (_fl_lib_loc MATCHES "\\.(so|dylib)(\\..*)?$")
+        if (_fl_lib_loc MATCHES "\\.(so|dylib|dll\\.a)(\\..*)?$")
             list(APPEND _fl_openssl_shared "${_fl_ssl_lib}=${_fl_lib_loc}")
         endif ()
     endforeach ()
