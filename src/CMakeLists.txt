@@ -293,6 +293,21 @@ if (WIN32)
 endif()
 
 # OpenSSL for TLS (libevent bufferevent_openssl, libmysqlclient).
+#
+# Linked statically on purpose: the released shared library must not carry a runtime
+# dependency on a particular OpenSSL installation. With the shared libs, the macOS
+# dylib gets an absolute path baked in (/opt/homebrew/opt/openssl@N/lib/libssl.N.dylib)
+# and fails to load on any machine that does not have that exact Homebrew prefix; the
+# Windows DLL likewise dragged in libssl-3-x64.dll / libcrypto-3-x64.dll.
+option(FAKELUA_PREFER_STATIC_DEPS "Prefer static third-party libraries where possible" ON)
+if (FAKELUA_PREFER_STATIC_DEPS)
+    set(OPENSSL_USE_STATIC_LIBS TRUE)
+    if (WIN32)
+        # Match the static CRT choice when consuming MSVC-built OpenSSL.
+        set(OPENSSL_MSVC_STATIC_RT ON)
+    endif ()
+endif ()
+
 if (WIN32 AND NOT OPENSSL_ROOT_DIR)
     get_filename_component(_fakelua_mingw_bin "${CMAKE_CXX_COMPILER}" DIRECTORY)
     get_filename_component(_fakelua_mingw_root "${_fakelua_mingw_bin}" DIRECTORY)
@@ -304,6 +319,23 @@ if (WIN32 AND NOT OPENSSL_ROOT_DIR)
 endif()
 find_package(OpenSSL REQUIRED)
 find_package(Threads REQUIRED)
+
+if (FAKELUA_PREFER_STATIC_DEPS)
+    # Guard against silently resolving to the shared libs (e.g. a Homebrew keg installed
+    # without the .a files), which would reintroduce the hardcoded runtime path.
+    set(_fl_openssl_shared "")
+    foreach (_fl_ssl_lib OpenSSL::SSL OpenSSL::Crypto)
+        get_target_property(_fl_lib_loc ${_fl_ssl_lib} IMPORTED_LOCATION)
+        if (_fl_lib_loc MATCHES "\\.(so|dylib)(\\..*)?$")
+            list(APPEND _fl_openssl_shared "${_fl_ssl_lib}=${_fl_lib_loc}")
+        endif ()
+    endforeach ()
+    if (_fl_openssl_shared)
+        message(WARNING
+                "FAKELUA_PREFER_STATIC_DEPS is ON but OpenSSL resolved to non-static libs: "
+                "${_fl_openssl_shared}. The shipped library will depend on OpenSSL at runtime.")
+    endif ()
+endif ()
 
 # libevent: per-State event_base, driven by runtime.tick() via EVLOOP_NONBLOCK.
 CPMAddPackage(
@@ -498,6 +530,20 @@ if (WIN32)
 endif()
 
 target_link_libraries(fakelua PRIVATE ${TARGET_LIB})
+
+# MinGW runtime: drop libgcc_s_seh-1.dll and libwinpthread-1.dll from the shipped DLL.
+#
+# libstdc++ is deliberately NOT statically linked. include/fakelua.h exposes STL types
+# across the ABI boundary (std::string returned by value, std::vector<std::pair<...>>),
+# and ViToString() is implemented inline in that header — so host and library must share
+# one copy of libstdc++. Statically linking it would give each side its own copy and
+# corrupt the heap whenever a std::string crosses the boundary.
+# libgcc / winpthread are pure C-level runtimes with no such ABI surface, so they are safe.
+if (FAKELUA_PREFER_STATIC_DEPS AND MINGW)
+    target_link_options(fakelua PRIVATE
+            -static-libgcc
+            -Wl,-Bstatic -lwinpthread -Wl,-Bdynamic)
+endif ()
 
 target_include_directories(fakelua PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
