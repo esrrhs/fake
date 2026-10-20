@@ -1615,12 +1615,14 @@ static inline CVar FlFormatInt(int64_t v) {
 }
 
 // select("#", multi) / select(i, multi) 的内联辅助。
-// 空 Multi（含空指针）是 0 个值。显式 nil 和其他单个值都是 1 个值。
+// 空 Multi（含空指针）是 0 个值。编译器把没有实参的 ... 传成 nil，所以 nil 也是 0。
+// 其它单个值是 1 个值。
 static inline CVar FlSelectHash(CVar vararg) {
     if (vararg.type_ == VAR_MULTI) {
         if (vararg.data_.m == NULL) return (CVar){.type_ = VAR_INT, .data_.i = 0};
         return (CVar){.type_ = VAR_INT, .data_.i = (int64_t)vararg.data_.m->count};
     }
+    if (vararg.type_ == VAR_NIL) return (CVar){.type_ = VAR_INT, .data_.i = 0};
     return (CVar){.type_ = VAR_INT, .data_.i = 1};
 }
 

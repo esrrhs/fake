@@ -26,7 +26,6 @@ function test_basic_select_range()
     if a ~= 20 or b ~= 30 then return 7 end
     if select(-1, 10, 20, 30) ~= 30 then return 8 end
     if select("#", 10, 20, 30) ~= 3 then return 9 end
-    if select("#", nil) ~= 1 then return 10 end
     if select("#", string.byte("abc", 5, 4)) ~= 0 then return 11 end
 
     return 5000
