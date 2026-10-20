@@ -1,5 +1,8 @@
 #include "gtest/gtest.h"
 
+// fork / pipe / poll 只在 POSIX 上有。Windows CI 没有 poll.h。
+#if !defined(_WIN32)
+
 #include <cerrno>
 #include <cstring>
 #include <filesystem>
@@ -10,17 +13,37 @@
 #include <unistd.h>
 #include <vector>
 
+#if defined(__APPLE__)
+#include <cstdint>
+#include <cstdlib>
+#include <mach-o/dyld.h>
+#endif
+
 namespace {
 
 std::string FluaBinary() {
+#if defined(__linux__)
     char buf[4096];
     const ssize_t n = ::readlink("/proc/self/exe", buf, sizeof(buf) - 1);
     if (n <= 0) {
         return "./flua";
     }
     buf[n] = '\0';
-    const std::filesystem::path exe(buf);
-    return (exe.parent_path() / "flua").string();
+    return (std::filesystem::path(buf).parent_path() / "flua").string();
+#elif defined(__APPLE__)
+    char buf[4096];
+    uint32_t size = sizeof(buf);
+    if (_NSGetExecutablePath(buf, &size) != 0) {
+        return "./flua";
+    }
+    char resolved[4096];
+    if (::realpath(buf, resolved) == nullptr) {
+        return "./flua";
+    }
+    return (std::filesystem::path(resolved).parent_path() / "flua").string();
+#else
+    return "./flua";
+#endif
 }
 
 struct FluaResult {
@@ -209,3 +232,5 @@ TEST(flua_host, empty_directory_exits) {
     EXPECT_NE(result.err.find("no .lua file"), std::string::npos) << result.err;
     EXPECT_EQ(result.err.find("main.init"), std::string::npos) << result.err;
 }
+
+#endif
