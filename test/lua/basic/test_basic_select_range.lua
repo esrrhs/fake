@@ -13,6 +13,23 @@ local function nvals(...)
     return select("#", ...)
 end
 
+-- 没有实参的 ... 在编译结果里是 nil，个数和下标都按 0 个值处理。
+local function empty_count(...)
+    return select("#", ...)
+end
+local function empty_first(...)
+    return select(1, ...)
+end
+local function empty_second(...)
+    return select(2, ...)
+end
+local function empty_neg(...)
+    return select(-1, ...)
+end
+local function empty_zero(...)
+    return select(0, ...)
+end
+
 function test_basic_select_range()
     if not must_err(function() select(0, 10, 20) end, "index out of range") then return 1 end
     if not must_err(function() select(-3, 10, 20) end, "index out of range") then return 2 end
@@ -27,6 +44,13 @@ function test_basic_select_range()
     if select(-1, 10, 20, 30) ~= 30 then return 8 end
     if select("#", 10, 20, 30) ~= 3 then return 9 end
     if select("#", string.byte("abc", 5, 4)) ~= 0 then return 11 end
+
+    -- 没有实参的 ... 在编译结果里是 nil，个数和下标都按 0 个值处理。
+    if empty_count() ~= 0 then return 20 end
+    if nvals(empty_first()) ~= 0 then return 21 end
+    if nvals(empty_second()) ~= 0 then return 22 end
+    if not must_err(empty_neg, "index out of range") then return 23 end
+    if not must_err(empty_zero, "index out of range") then return 24 end
 
     return 5000
 end

@@ -1641,7 +1641,13 @@ static inline CVar FlSelectIndex(int64_t idx, CVar vararg) {
         if (nret == 1) return m->vars[start];
         return FlSliceMulti(_S, vararg, start);
     }
-    /* 单个实参（含显式 nil）也是 1 个值。越界下标报错；超过末尾返回 0 个值。 */
+    // 没有实参的 ... 传进来是 nil，和空 Multi 一样是 0 个值。
+    // 正下标返回空，0 和负数都越界。Multi 在上面已经返回，这里碰不到热路径。
+    if (vararg.type_ == VAR_NIL) {
+        if (idx < 1) FakeluaThrowError(_S, "bad argument #1 to 'select': index out of range");
+        return FlAllocMulti(_S, 0);
+    }
+    /* 其它单个实参是 1 个值。越界下标报错；超过末尾返回 0 个值。 */
     if (idx < 0) {
         if (idx < -2) FakeluaThrowError(_S, "bad argument #1 to 'select': index out of range");
         idx = idx + 2;
