@@ -308,6 +308,64 @@ TEST(test_native, test_native_typed_template_callback) {
     }
 }
 
+// 宿主写原生回调时读参数、回传标量都不该伸进 inter::（那是解释器/JIT 的实现细节）。
+TEST(test_native, host_scalar_arg_helpers) {
+    auto *s = FakeluaNewState();
+    ASSERT_NE(s, nullptr);
+
+    RegisterNativeFunction(s, "host_join", 0, true, [](State *st, CVar *args, int n) -> CVar {
+        const std::string name = GetNativeStringArg(st, args, n, 0, "<none>");
+        const int64_t id = GetNativeIntArg(st, args, n, 1, -1);
+        // 缺省的第 3、4 个参数走默认值，不当成错误
+        const bool flag = GetNativeBoolArg(st, args, n, 2, true);
+        const double ratio = GetNativeFloatArg(st, args, n, 3, 0.5);
+        return NativeString(st, name + ":" + std::to_string(id) + (flag ? ":T" : ":F") + ":" + std::to_string(ratio));
+    });
+
+    RegisterNativeFunction(s, "host_scalar_roundtrip", 0, true, [](State *st, CVar *args, int n) -> CVar {
+        // 数字/布尔参数按 Lua 语义宽容读取：bool 当 0/1
+        const int64_t from_bool = GetNativeIntArg(st, args, n, 0, 42);
+        const bool from_int = GetNativeBoolArg(st, args, n, 1, false);
+        if (from_int) return NativeInt(st, from_bool);
+        return NativeBool(st, from_bool == 0);
+    });
+
+    CompileConfig cfg;
+    ASSERT_NO_THROW(CompileString(s, R"(package "HostHelpers"
+function defaults()
+    return host_join("p1", 7)
+end
+function omitted()
+    return host_join()
+end
+function bool_as_int()
+    return host_scalar_roundtrip(true, 1)
+end
+function zero_flag()
+    if host_scalar_roundtrip(9, 0) then return 1 else return 0 end
+end
+)""", cfg));
+
+    for (auto jit_type: AllJitTypes()) {
+        std::string out;
+        Call(s, jit_type, "HostHelpers.defaults", out);
+        EXPECT_EQ(out, "p1:7:T:0.500000") << JitTypeName(jit_type);
+
+        Call(s, jit_type, "HostHelpers.omitted", out);
+        EXPECT_EQ(out, "<none>:-1:T:0.500000") << JitTypeName(jit_type);
+
+        int64_t ret = 0;
+        Call(s, jit_type, "HostHelpers.bool_as_int", ret);
+        EXPECT_EQ(ret, 1) << JitTypeName(jit_type);
+
+        Call(s, jit_type, "HostHelpers.zero_flag", ret);
+        // from_bool = 9、from_int = false → NativeBool(9 == 0) → Lua 侧走 else 分支
+        EXPECT_EQ(ret, 0) << JitTypeName(jit_type);
+    }
+
+    FakeluaDeleteState(s);
+}
+
 TEST(test_native, test_native_object_methods) {
     auto *s = FakeluaNewState();
     auto &mgr = GetNativeObjectManager(s);

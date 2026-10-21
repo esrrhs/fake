@@ -269,6 +269,10 @@ private:
     // 根据当前缩进深度生成 C 代码缩进空白字符
     [[nodiscard]] std::string GenTab() const;
 
+    // 把生成的代码锚定回 Lua 源码位置：#line 让编译告警指向 Lua 文件与行，
+    // FL_LOC_SET 写的状态位置槽则是运行期报错读的那一行。
+    void EmitLuaLine(const SyntaxTreeInterface *node);
+
     // 返回当前 active 代码段（section）的输出流引用
     std::ostream &Out() {
         return sections_[static_cast<size_t>(cur_section_)];
