@@ -4703,3 +4703,35 @@ TEST(infer, test_spec_miss_exception) {
         ASSERT_TRUE(std::string(e.what()).find("test spec miss signal") != std::string::npos);
     }
 }
+
+// Multi-assign: all RHS and all LHS table base/key exprs evaluate before stores.
+TEST(infer, test_multi_assign_lhs_eval) {
+    InferRunHelper([](State *s, JITType type, bool debug_mode) {
+        CompileFile(s, "./infer/test_multi_assign_lhs_eval.lua", {.debug_mode = debug_mode});
+        int ret = 0;
+        Call(s, type, "test_index_before_store", ret);
+        ASSERT_EQ(ret, 1);
+        Call(s, type, "test_dot_base_before_store", ret);
+        ASSERT_EQ(ret, 1);
+        Call(s, type, "test_side_effect_key", ret);
+        ASSERT_EQ(ret, 1);
+        Call(s, type, "test_lhs_before_rhs_order", ret);
+        ASSERT_EQ(ret, 1);
+        Call(s, type, "test_simple_swap", ret);
+        ASSERT_EQ(ret, 1);
+    });
+}
+
+// Nested non-vararg captures outer ...; nested vararg uses its own.
+TEST(infer, test_nested_capture_outer_vararg) {
+    InferRunHelper([](State *s, JITType type, bool debug_mode) {
+        CompileFile(s, "./infer/test_nested_capture_outer_vararg.lua", {.debug_mode = debug_mode});
+        int ret = 0;
+        Call(s, type, "test_capture_outer_vararg", ret);
+        ASSERT_EQ(ret, 1);
+        Call(s, type, "test_nested_own_vararg", ret);
+        ASSERT_EQ(ret, 1);
+        Call(s, type, "test_funcdef_capture_outer_vararg", ret);
+        ASSERT_EQ(ret, 1);
+    });
+}
