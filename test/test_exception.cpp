@@ -1670,6 +1670,8 @@ TEST(exception, runtime_error_carries_lua_location) {
         {"call_non_function", "test_error_location.lua:16"},
         // 原生函数里抛的错也要定位到调用它的那条 Lua 语句
         {"native_bad_argument", "test_error_location.lua:22"},
+        // 同一条语句中函数调用返回后，后续表达式出错仍必须定位到本语句
+        {"error_after_callee_returns", "test_error_location.lua:46"},
     };
     for (const auto jit_type: AllJitTypes()) {
         for (const auto &c: cases) {

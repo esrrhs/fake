@@ -102,32 +102,48 @@ struct ArrayShapeInfo {
 static ArrayShapeInfo CheckArrayShape(const std::vector<table::TableKV> &kvs) {
     ArrayShapeInfo info;
     info.count = kvs.size();
+    if (kvs.empty()) {
+        info.shape = ArrayShape::kArray;
+        return info;
+    }
+    // 只要有任何非整数 key，就当作普通 Object
     for (const auto &kv: kvs) {
         if (kv.key.type_ != static_cast<int>(VarType::Int)) {
             return info;
         }
         const int64_t key = kv.key.data_.i;
-        if (key < 1 || key > 1000000) {
-            return info;
-        }
         if (key > info.max_idx) info.max_idx = key;
     }
-    if (kvs.empty() || static_cast<size_t>(info.max_idx) == kvs.size()) {
-        info.shape = ArrayShape::kArray;
-        return info;
-    }
-    info.shape = ArrayShape::kHole;
-    // 找出第一个缺失的下标，报错时直接指出来。
-    std::vector<bool> seen(static_cast<size_t>(info.max_idx) + 1, false);
+
+    // 全是整数 key 即为数组意图：按抽屉原理，若键从 1 连续递增，则 max_idx == kvs.size()
+    // 且不存在 <= 0 的 key。第一个缺失的正整数下标必然在 [1, kvs.size() + 1] 内，
+    // 无论键有多大都只需 kvs.size() + 2 槽标记，杜绝大 key 内存溢出或漏检。
+    std::vector<bool> seen(kvs.size() + 2, false);
+    bool has_non_positive = false;
     for (const auto &kv: kvs) {
-        seen[static_cast<size_t>(kv.key.data_.i)] = true;
+        const int64_t key = kv.key.data_.i;
+        if (key >= 1 && static_cast<size_t>(key) <= kvs.size() + 1) {
+            seen[static_cast<size_t>(key)] = true;
+        } else if (key < 1) {
+            has_non_positive = true;
+        }
     }
-    for (int64_t i = 1; i <= info.max_idx; ++i) {
-        if (!seen[static_cast<size_t>(i)]) {
-            info.hole_at = i;
+
+    int64_t first_missing = 1;
+    for (size_t i = 1; i < seen.size(); ++i) {
+        if (!seen[i]) {
+            first_missing = static_cast<int64_t>(i);
             break;
         }
     }
+
+    if (!has_non_positive && static_cast<size_t>(info.max_idx) == kvs.size() && first_missing > static_cast<int64_t>(kvs.size())) {
+        info.shape = ArrayShape::kArray;
+        return info;
+    }
+
+    info.shape = ArrayShape::kHole;
+    info.hole_at = first_missing;
     return info;
 }
 

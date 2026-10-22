@@ -360,6 +360,7 @@ private:
     std::unordered_map<const SyntaxTreeInterface *, VarDef *> var_to_def_map_;
 
     FuncInfo *cur_func_info_ = nullptr;// The function currently being compiled
+    const SyntaxTreeInterface *cur_stmt_node_ = nullptr;// 当前正在编译的语句节点，用于在调用返回后重新锚定 Lua 源码位置
     std::string cur_package_name_;     // Current package name declared in chunk
 
     // 需要打 CONST_FLAG 的全局变量集合（初始化为非空表构造器的全局表/闭包）

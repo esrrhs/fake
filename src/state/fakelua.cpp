@@ -270,11 +270,10 @@ double CVarToNumber(const CVar &v, double default_val) {
 
 bool CVarToBool(const CVar &v, bool default_val) {
     const auto &var = AsVar(v);
+    if (var.Type() == VarType::Nil) return default_val;
     if (var.Type() == VarType::Bool) return var.GetBool();
-    // 脚本里 1/0 当布尔传是很常见的写法，跟 CVarToInteger 一样宽容。
-    if (var.Type() == VarType::Int) return var.GetInt() != 0;
-    if (var.Type() == VarType::Float) return var.GetFloat() != 0.0;
-    return default_val;
+    // 遵循 Lua 真假值规则：除 nil 与 false 外的一切值（包括 0、0.0、空字符串等）均为 true。
+    return true;
 }
 
 std::string CVarToString(const CVar &v, const char *default_val) {

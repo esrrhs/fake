@@ -868,7 +868,8 @@ private:
 int64_t GetNativeIntArg(State *s, CVar *args, int n, int idx, int64_t default_val = 0);
 
 // The same tolerant read for the other scalar types. Float accepts int and numeric
-// string; bool accepts bool and non-zero numbers; string accepts only string values.
+// string; bool strictly follows Lua truthiness (nil/missing yields default_val,
+// false yields false, all other values including 0/0.0/"" yield true); string accepts only string values.
 // Missing argument (idx >= n) always gives default_val.
 double GetNativeFloatArg(State *s, CVar *args, int n, int idx, double default_val = 0.0);
 bool GetNativeBoolArg(State *s, CVar *args, int n, int idx, bool default_val = false);

@@ -344,12 +344,13 @@ function test_encode_sparse_without_index1()
     return 1
 end
 
--- 测试 JSON 编码：大整数键（应编码为对象）
+-- 测试 JSON 编码：大整数键有洞同样要报错（整数键一律视为数组意图）
 function test_encode_large_int_key()
     local t = {}
     t[9999999] = "big"
-    local s = json.encode(t)
-    if not string.find(s, "9999999") then return 0 end
+    local ok, err = pcall(function() json.encode(t) end)
+    if ok then return 0 end
+    if not string.find(err, "hole at index 1") then return 0 end
     return 1
 end
 

@@ -1296,6 +1296,8 @@ void CGen::CompileStmt(const SyntaxTreeInterfacePtr &stmt) {
     if (IsPackageHeaderStmt(stmt)) {
         return;
     }
+    const auto prev_stmt_node = cur_stmt_node_;
+    cur_stmt_node_ = stmt.get();
     EmitLuaLine(stmt.get());
     switch (stmt->Type()) {
         case SyntaxTreeType::Return:
@@ -1352,6 +1354,7 @@ void CGen::CompileStmt(const SyntaxTreeInterfacePtr &stmt) {
         default:
             ThrowError(std::format("not support stmt type: {}", SyntaxTreeTypeToString(stmt->Type())), stmt);
     }
+    cur_stmt_node_ = prev_stmt_node;
 }
 
 void CGen::CompileStmtReturn(const SyntaxTreeInterfacePtr &stmt) {
@@ -2308,6 +2311,9 @@ void CGen::CompileStmtForIn(const SyntaxTreeInterfacePtr &stmt) {
 
         std::string iter_res = std::format("flua_fi_res_{}", tmp_var_counter_++);
         Out() << GenTab() << "CVar " << iter_res << " = FlCallClosure(_S, " << iter_f << ", 2, " << iter_s << ", " << iter_var << ");\n";
+        if (cur_stmt_node_ != nullptr) {
+            EmitLuaLine(cur_stmt_node_);
+        }
 
         std::vector<std::string> loop_var_tmps;
         for (size_t i = 0; i < names.size(); ++i) {
@@ -3450,6 +3456,9 @@ std::string CGen::CompileFunctioncall(const SyntaxTreeInterfacePtr &functioncall
     const auto tmp = std::format("flua_call_{}", tmp_var_counter_++);
     func_temp_decls_ << "    " << "CVar " << tmp << ";\n";
     Out() << GenTab() << tmp << " = " << call_expr << ";\n";
+    if (cur_stmt_node_ != nullptr) {
+        EmitLuaLine(cur_stmt_node_);
+    }
 
     return tmp;
 }
@@ -4218,6 +4227,9 @@ std::string CGen::TryCompileSpecDirectCall(const std::shared_ptr<SyntaxTreeFunct
                         Out() << GenTab() << tmp << " = " << BoxNativeValue(ntmp, spec_ret) << ";\n";
                     } else {
                         Out() << GenTab() << tmp << " = " << call << ";\n";
+                    }
+                    if (cur_stmt_node_ != nullptr) {
+                        EmitLuaLine(cur_stmt_node_);
                     }
                     return tmp;
                 }

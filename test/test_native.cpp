@@ -342,7 +342,12 @@ function bool_as_int()
     return host_scalar_roundtrip(true, 1)
 end
 function zero_flag()
-    if host_scalar_roundtrip(9, 0) then return 1 else return 0 end
+    -- Lua 语义下 0 是真值，所以 from_int 为 true，返回 from_bool (9)
+    if host_scalar_roundtrip(9, 0) == 9 then return 1 else return 0 end
+end
+function false_flag()
+    -- false 是假值，from_int 为 false，返回 NativeBool(from_bool == 0) -> true
+    if host_scalar_roundtrip(0, false) then return 1 else return 0 end
 end
 )""", cfg));
 
@@ -359,8 +364,10 @@ end
         EXPECT_EQ(ret, 1) << JitTypeName(jit_type);
 
         Call(s, jit_type, "HostHelpers.zero_flag", ret);
-        // from_bool = 9、from_int = false → NativeBool(9 == 0) → Lua 侧走 else 分支
-        EXPECT_EQ(ret, 0) << JitTypeName(jit_type);
+        EXPECT_EQ(ret, 1) << JitTypeName(jit_type);
+
+        Call(s, jit_type, "HostHelpers.false_flag", ret);
+        EXPECT_EQ(ret, 1) << JitTypeName(jit_type);
     }
 
     FakeluaDeleteState(s);

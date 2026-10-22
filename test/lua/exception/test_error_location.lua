@@ -37,3 +37,12 @@ function nested_frames()
     if string.find(err, "test_error_location.lua:27") == nil then return 0 end
     return 1
 end
+
+local function returns_nil()
+    return nil
+end
+
+function error_after_callee_returns()
+    local x = returns_nil() + 1
+    return x
+end
