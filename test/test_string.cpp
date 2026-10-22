@@ -291,6 +291,12 @@ TEST(test_string, test_string_lua54_pack_errors) {
     CallThrow(s, "test_string_pack_z_with_zero", res);
     CallThrow(s, "test_string_unpack_unfinished_z", res);
     CallThrow(s, "test_string_packsize_variable", res);
+    CallThrow(s, "test_string_packsize_s_variable", res);
+    CallThrow(s, "test_string_pack_bad_option", res);
+    CallThrow(s, "test_string_pack_bad_align", res);
+    int64_t padding = -1;
+    CallAll(s, "test_string_packsize_padding", padding);
+    EXPECT_EQ(padding, 0);
     FakeluaDeleteState(s);
 }
 

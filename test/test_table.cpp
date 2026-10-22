@@ -498,5 +498,11 @@ TEST(test_table, test_table_move_unpack_limits) {
     ExpectThrowsWith(s, "test_table_unpack_over", "too many results to unpack", kUnpackJustOver);
     ExpectThrowsWith(s, "test_table_unpack_wrap", "too many results to unpack");
 
+    for (const char *name: {"test_table_move_presize_skip", "test_table_move_overlap_backward", "test_table_move_empty_range"}) {
+        int64_t r = 0;
+        CallAll(s, name, r);
+        EXPECT_EQ(r, 5000) << name;
+    }
+
     FakeluaDeleteState(s);
 }

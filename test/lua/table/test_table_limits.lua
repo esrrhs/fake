@@ -57,3 +57,32 @@ function test_table_unpack_ok()
     if x ~= 8 then return 0 end
     return 5000
 end
+
+-- 目标空表的预扩容装不进一块引擎内存时，必须退化为逐元素插入且结果正确。
+function test_table_move_presize_skip()
+    local src = {}
+    src[1] = 7
+    src[100000] = 9
+    local dst = {}
+    table.move(src, 1, 100000, 1, dst)
+    if dst[1] ~= 7 then return 1 end
+    if dst[2] ~= nil then return 2 end
+    if dst[100000] ~= 9 then return 3 end
+    return 5000
+end
+
+-- 同一张表内重叠移动（t > f 且 t <= e）走反向拷贝。
+function test_table_move_overlap_backward()
+    local t = { 1, 2, 3, 4, 5 }
+    table.move(t, 1, 4, 2)
+    if t[1] ~= 1 or t[2] ~= 1 or t[3] ~= 2 or t[4] ~= 3 or t[5] ~= 4 then return 1 end
+    return 5000
+end
+
+-- e < f 时是空移动，直接返回目标表。
+function test_table_move_empty_range()
+    local dst = { 1 }
+    local r = table.move({ 1, 2 }, 2, 1, 1, dst)
+    if r ~= dst or dst[1] ~= 1 then return 1 end
+    return 5000
+end

@@ -193,10 +193,11 @@ private:
         while (s + i < se_ && SingleMatch(s + i, p)) {
             i++;
         }
+        // 每次失败后都会恢复到进入时的状态，所以快照只需在循环外取一次。
+        Capture snap[kMaxCaptures];
+        const int snap_level = level_;
+        std::memcpy(snap, caps_, sizeof(caps_));
         while (i >= 0) {
-            Capture snap[kMaxCaptures];
-            const int snap_level = level_;
-            std::memcpy(snap, caps_, sizeof(caps_));
             const char *res = Match(s + i, ep + 1);
             if (res != nullptr) return res;
             RestoreCaps(snap, snap_level);
@@ -207,10 +208,10 @@ private:
 
     // 惰性重复
     const char *MinExpand(const char *s, const char *p, const char *ep) {
+        Capture snap[kMaxCaptures];
+        const int snap_level = level_;
+        std::memcpy(snap, caps_, sizeof(caps_));
         for (;;) {
-            Capture snap[kMaxCaptures];
-            const int snap_level = level_;
-            std::memcpy(snap, caps_, sizeof(caps_));
             const char *res = Match(s, ep + 1);
             if (res != nullptr) return res;
             RestoreCaps(snap, snap_level);
